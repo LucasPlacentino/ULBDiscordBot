@@ -40,8 +40,14 @@ class Ulb(commands.Cog):
         while not Registration.set:
             await asyncio.sleep(1)
 
-    @commands.slash_command(name="ulb", description="Vérifier son adresse mail ULB.")
-    async def ulb(self, inter: ApplicationCommandInteraction):
+    @commands.slash_command(
+        name="ulb",
+        description="Vérifier son adresse mail ULB."
+    )
+    async def ulb(
+        self,
+        inter: ApplicationCommandInteraction
+    ):
         await inter.response.defer(ephemeral=True)
         await self.wait_setup()
 

@@ -41,7 +41,10 @@ class Admin(commands.Cog):
     async def user(self, inter):
         pass
 
-    @user.sub_command(name="add", description="Ajouter un utilisateur discord.")
+    @user.sub_command(
+        name="add",
+        description="Ajouter un utilisateur discord."
+    )
     async def user_set(
         self,
         inter: disnake.ApplicationCommandInteraction,
@@ -91,7 +94,10 @@ class Admin(commands.Cog):
         await inter.response.send_modal(AdminEditUserModal(user))
 
     # TODO: put all fields optional and added autocomplete to all of them + error if no one is provided
-    @user.sub_command(name="info", description="Voir les informations d'un utilisateur enregistré")
+    @user.sub_command(
+        name="info",
+        description="Voir les informations d'un utilisateur enregistré"
+    )
     async def user_info(
         self,
         inter: disnake.ApplicationCommandInteraction,
@@ -114,7 +120,10 @@ class Admin(commands.Cog):
         )
 
     # TODO: add autocomplete for name
-    @user.sub_command(name="delete", description="Supprimer un utilisateur enregistré")
+    @user.sub_command(
+        name="delete",
+        description="Supprimer un utilisateur enregistré"
+    )
     async def user_delete(
         self,
         inter: disnake.ApplicationCommandInteraction,

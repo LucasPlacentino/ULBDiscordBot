@@ -73,13 +73,17 @@ Copy the `Generated URL` given below, this is the URL to use to add the bot to y
 
 ## 🔐 Configuration
 
-Copy the `.env_template` -`.env` to easily see all the parameters that need to be set.
+Copy the contents of the `.env_template` file to a newly created `.env` file to easily see all the parameters that need to be set.
 
 ### Discord
 
 * `DISCORD_TOKEN`
 
 The bot token generated above.
+
+* `ADMIN_GUILD_ID`
+
+The server ID used for admin commands.
 
 * `LOG_CHANNEL`
 
@@ -106,6 +110,8 @@ The email address
 You need to go to the [google account settings Security](https://myaccount.google.com/security?hl=fr), enable the two-factor authentification then generate an applications password for the email app.
 
 ### Google Sheet
+
+Create a Google Sheet, with one sheet named "users" and another sheet named "guilds".
 
 To generate google sheet api credentials, follow [this guide](https://medium.com/@a.marenkov/how-to-get-credentials-for-google-sheets-456b7e88c430). You will get a `.json` file with all the following fields:
 
