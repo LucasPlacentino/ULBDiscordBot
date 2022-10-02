@@ -266,6 +266,7 @@ class Admin(commands.Cog):
                 ),
                 ephemeral=True,
             )
+            # TODO: remove user from registered role of all guilds ? Maybe with an options
 
     @user_edit.autocomplete("user_id")
     @user_info.autocomplete("user_id")
