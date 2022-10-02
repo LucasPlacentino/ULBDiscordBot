@@ -114,7 +114,7 @@ You need to go to the [google account settings Security](https://myaccount.googl
 
 ### Google Sheet
 
-Create a Google Sheet, with one sheet named "users" and another sheet named "guilds".
+Create a Google Sheet, with one sheet named "users" and another sheet named "guilds", **leave them empty**.
 
 To generate google sheet api credentials, follow [this guide](https://medium.com/@a.marenkov/how-to-get-credentials-for-google-sheets-456b7e88c430). You will get a `.json` file with all the following fields:
 
