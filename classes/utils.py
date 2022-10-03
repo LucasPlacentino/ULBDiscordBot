@@ -13,6 +13,46 @@ class RoleNotInGuildError(Exception):
         super().__init__(f"The role  {role.name}:{role.id} is not part of the guild {guild.name}:{guild.id}.")
 
 
+async def wait_data(inter: disnake.ApplicationCommandInteraction = None, timeout: int = None) -> bool:
+    """Async sleep until Database is loaded
+
+    Parameters
+    ----------
+    inter : disnake.ApplicationCommandInteraction, optional
+        The inter to edit_original_response in case of timeout, by default None
+    timeout : int, optional
+        The timeout duration, by default None. Must be provide if inter is provided.
+
+    Returns
+    -------
+    bool
+        True if not timeout, False if timeout
+    """
+    if inter != None and timeout == None:
+        logging.warning(
+            f"[Utils:wait_data] timeout cannot be None if inter is provided at the same time. Timeout=30 is used instead."
+        )
+        timeout = 30
+    if not Database.loaded:
+        logging.trace("[Utils] Waiting for database to be loaded...")
+        current_time = 0
+        while not Database.loaded and (timeout == None or current_time < timeout):
+            await asyncio.sleep(1)
+            current_time += 1
+        if not Database.loaded:
+            logging.error("[Utils] Database load waiting timeout !")
+            if inter != None:
+                await inter.edit_original_response(
+                    embed=disnake.Embed(
+                        title="Commande temporairement inaccessible.",
+                        description="Veuillez réessayer dans quelques instants.",
+                        color=disnake.Color.orange(),
+                    )
+                )
+            return False
+    return True
+
+
 async def update_member(member: disnake.Member, *, name: str = None, role: disnake.Role = None, rename: bool = None):
     """Update the role and nickname of a given member for the associated guild
 
@@ -36,23 +76,21 @@ async def update_member(member: disnake.Member, *, name: str = None, role: disna
         role = Database.ulb_guilds.get(member.guild).role
     elif role not in member.guild.roles:
         raise RoleNotInGuildError(role, member.guild)
+    if rename == None:
+        rename = Database.ulb_guilds.get(member.guild).rename
 
-    # Only do something if the member is not already on ULB role
+    if rename:
+        if name == None:
+            name = Database.ulb_users.get(member).name
+        if member.nick == None or member.nick != name:
+            try:
+                await member.edit(nick=f"{name}")
+                logging.info(f"[Utils:update_user] [User:{member.id}] [Guild:{member.guild.id}] Set name={name}")
+            except HTTPException as ex:
+                logging.warning(
+                    f'[Utils:update_user] [User:{member.id}] [Guild:{member.guild.id}] Not able to edit user "{member.name}:{member.id}" nick to "{name}": {ex}'
+                )
     if role not in member.roles:
-        if rename == None:
-            rename = Database.ulb_guilds.get(member.guild).rename
-
-        if rename:
-            if name == None:
-                name = Database.ulb_users.get(member).name
-            if member.nick == None or member.nick != name:
-                try:
-                    await member.edit(nick=f"{name}")
-                    logging.info(f"[Utils:update_user] [User:{member.id}] [Guild:{member.guild.id}] Set name={name}")
-                except HTTPException as ex:
-                    logging.warning(
-                        f'[Utils:update_user] [User:{member.id}] [Guild:{member.guild.id}] Not able to edit user "{member.name}:{member.id}" nick to "{name}": {ex}'
-                    )
         try:
             await member.add_roles(role)
             logging.info(f"[Utils:update_user] [User:{member.id}] [Guild:{member.guild.id}] Set role={role.id}")

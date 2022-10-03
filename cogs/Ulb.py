@@ -22,23 +22,26 @@ class Ulb(commands.Cog):
         logging.info("[Cog:Ulb] Ready !")
         await utils.update_all_guilds()
 
-    async def wait_data(self) -> None:
-        """Async sleep until GoogleSheet is loaded"""
-        if not Database.loaded:
-            logging.trace("[Cog:Ulb] Waiting for data to be load from google sheet...")
-            await asyncio.sleep(1)
-        while not Database.loaded:
-            await asyncio.sleep(1)
-
-    async def wait_setup(self) -> None:
+    async def wait_setup(self, inter: disnake.ApplicationCommandInteraction) -> None:
         """Async sleep until GoogleSheet is loaded and RegistrationForm is set"""
-        if not Database.loaded:
-            await self.wait_data()
-        if not Registration.set:
-            logging.trace("[Cog:Ulb]  Waiting for registrationForm to be set...")
-            await asyncio.sleep(1)
-        while not Registration.set:
-            await asyncio.sleep(1)
+        if await utils.wait_data(inter, 15):
+            if not Registration.set:
+                logging.trace("[Cog:Ulb]  Waiting for registrationForm to be set...")
+                max_time = 10
+                current_time = 0
+                while not Registration.set and current_time < max_time:
+                    await asyncio.sleep(1)
+                    current_time += 1
+                if not Registration.set:
+                    await inter.edit_original_response(
+                        embed=disnake.Embed(
+                            title="Commande temporairement inaccessible",
+                            description="Veuillez réessayer dans quelques instants.",
+                            color=disnake.Color.orange(),
+                        )
+                    )
+                return False
+        return True
 
     @commands.slash_command(
         name="ulb",
@@ -49,7 +52,8 @@ class Ulb(commands.Cog):
         inter: ApplicationCommandInteraction
     ):
         await inter.response.defer(ephemeral=True)
-        await self.wait_setup()
+        if not (await self.wait_setup(inter)):
+            return
 
         await Registration.new(inter)
 
@@ -69,9 +73,13 @@ class Ulb(commands.Cog):
             choices=["Non", "Oui"],
         ),
     ):
+        await inter.response.defer(ephemeral=True)
+
+        if not (await utils.wait_data(inter, 15)):
+            return
 
         if role_ulb == inter.guild.default_role:
-            await inter.response.send_message(
+            await inter.edit_original_response(
                 embed=disnake.Embed(
                     title="Setup du role ULB du servers",
                     description=f"Le role {role_ulb.mention} ne peux pas être utilisé comme role **ULB** !.",
@@ -79,9 +87,6 @@ class Ulb(commands.Cog):
                 )
             )
             return
-
-        await inter.response.defer(ephemeral=True)
-        await self.wait_data()
 
         rename = rename == "Oui"  # Convert from str to bool
 
@@ -114,16 +119,19 @@ class Ulb(commands.Cog):
         dm_permission=False,
     )
     async def info(self, inter: disnake.ApplicationCommandInteraction):
+        await inter.response.defer(ephemeral=True)
+        if not (await self.wait_setup(inter)):
+            return
+
         guilddata = Database.ulb_guilds.get(inter.guild, None)
 
         if guilddata == None:
-            await inter.response.send_message(
+            await inter.edit_original_response(
                 embed=disnake.Embed(
                     title="Info du serveur",
                     description="Ce serveur n'est pas encore configurer.\nUtilisez **/setup** pour commencer.",
                     color=disnake.Color.orange(),
-                ),
-                ephemeral=True,
+                )
             )
 
         embed = disnake.Embed(
@@ -143,11 +151,12 @@ class Ulb(commands.Cog):
                 name="✅",
                 value="Pas de conflit de permission",
             )
-        await inter.response.send_message(embed=embed, ephemeral=True)
+        await inter.edit_original_response(embed=embed)
 
     @commands.Cog.listener("on_member_join")
     async def on_member_join(self, member: disnake.Member):
-        await self.wait_data()
+        if not (await utils.wait_data()):
+            return
         logging.trace(f"[Cog:Ulb] [Guild:{member.guild.id}] [User:{member.id}] user joined")
 
         guild_data = Database.ulb_guilds.get(member.guild, None)
@@ -177,6 +186,8 @@ class Ulb(commands.Cog):
 
     @commands.Cog.listener("on_guild_role_update")
     async def on_guild_role_update(self, before: disnake.Role, after: disnake.Role):
+        if not (await utils.wait_data()):
+            return
         guild_data = Database.ulb_guilds.get(after.guild, None)
         if (
             guild_data
@@ -211,6 +222,8 @@ class Ulb(commands.Cog):
 
     @commands.Cog.listener("on_guild_role_delete")
     async def on_guild_role_delete(self, role: disnake.Role):
+        if not (await utils.wait_data()):
+            return
         guild_data = Database.ulb_guilds.get(role.guild, None)
         if guild_data:
             logging.trace(
@@ -239,9 +252,13 @@ class Ulb(commands.Cog):
 
     @commands.Cog.listener("on_guild_remove")
     async def on_guild_remove(self, guild: disnake.Guild):
-        logging.trace(f"[Cog:Ulb] [Guild {guild.name}:{guild.id}] Guild removed: Deleting entey from database...")
-        await Database.delete_guild(guild)
-        logging.info(f"[Cog:Ulb] [Guild {guild.name}:{guild.id}] Guild removed: Entry deleted from database.")
+        if not (await utils.wait_data()):
+            return
+
+        if guild in Database.ulb_guilds.keys():
+            logging.trace(f"[Cog:Ulb] [Guild {guild.name}:{guild.id}] Guild removed: Deleting entey from database...")
+            await Database.delete_guild(guild)
+            logging.info(f"[Cog:Ulb] [Guild {guild.name}:{guild.id}] Guild removed: Entry deleted from database.")
 
     @commands.Cog.listener("on_resumed")
     async def on_resumed(self):
